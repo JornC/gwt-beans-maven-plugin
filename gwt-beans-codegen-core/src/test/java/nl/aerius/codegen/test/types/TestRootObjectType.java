@@ -21,6 +21,7 @@ public class TestRootObjectType {
   private TestNestedMapType nestedMapType;
 
   private TestPolyBase testPolyBase;
+  private TestConcreteSubtypeOnlyType concreteSubtypeOnly;
   private TestPrimitiveArrayType primitiveArrays;
   private TestConstructorBasedType constructorBased;
   private TestConstructorWithGenericsType constructorWithGenerics;
@@ -131,6 +132,14 @@ public class TestRootObjectType {
     this.testPolyBase = testPolyBase;
   }
 
+  public TestConcreteSubtypeOnlyType getConcreteSubtypeOnly() {
+    return concreteSubtypeOnly;
+  }
+
+  public void setConcreteSubtypeOnly(TestConcreteSubtypeOnlyType concreteSubtypeOnly) {
+    this.concreteSubtypeOnly = concreteSubtypeOnly;
+  }
+
   public TestPrimitiveArrayType getPrimitiveArrays() {
     return primitiveArrays;
   }
@@ -186,6 +195,7 @@ public class TestRootObjectType {
     obj.setConcreteType(ConcreteType.createFullObject());
     obj.setNestedMapType(TestNestedMapType.createFullObject());
     obj.setTestPolyBase(new TestPolySubA("BaseValueA", 123));
+    obj.setConcreteSubtypeOnly(TestConcreteSubtypeOnlyType.createFullObject());
     obj.setPrimitiveArrays(TestPrimitiveArrayType.createFullObject());
     obj.setConstructorBased(TestConstructorBasedType.createFullObject());
     obj.setConstructorWithGenerics(TestConstructorWithGenericsType.createFullObject());
@@ -234,6 +244,7 @@ public class TestRootObjectType {
     obj.setConcreteType(null);
     obj.setNestedMapType(null);
     obj.setTestPolyBase(null);
+    obj.setConcreteSubtypeOnly(null);
     obj.setPrimitiveArrays(null);
     return obj;
   }

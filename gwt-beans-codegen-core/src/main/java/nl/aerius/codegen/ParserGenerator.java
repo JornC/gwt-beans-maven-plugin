@@ -106,6 +106,7 @@ public class ParserGenerator {
       final TypeAnalyzer analyzer = new TypeAnalyzer(classFinder, logger);
       analyzer.setCustomParserTypes(customParserTypes);
       final Set<ClassName> classNames = analyzer.analyzeClass(targetClass.getName());
+      final Set<Class<?>> polymorphicallyReachedTypes = analyzer.getPolymorphicallyReachedTypes();
 
       // Filter out types that have custom parsers (this is now redundant since
       // TypeAnalyzer handles it)
@@ -116,7 +117,8 @@ public class ParserGenerator {
 
       // Create a parser writer and generate all parsers
       // Pass the generator name and details (version + hash) to the writer
-      final ParserWriter parserWriter = new ParserWriter(outputDir, parserPackage, generatorName, generatorDetails, classFinder, logger);
+      final ParserWriter parserWriter = new ParserWriter(outputDir, parserPackage, generatorName, generatorDetails, classFinder, logger,
+          polymorphicallyReachedTypes);
 
       parserWriter.generateParsers(classFinder, filteredClassNames);
 

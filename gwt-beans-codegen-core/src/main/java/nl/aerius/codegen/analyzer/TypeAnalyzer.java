@@ -39,6 +39,7 @@ public class TypeAnalyzer {
   private final Set<Class<?>> processedTypes;
   private final Set<String> skippedTypes;
   private final Set<ClassName> discoveredTypes;
+  private final Set<Class<?>> polymorphicallyReachedTypes;
   private final Set<String> printedTypes = new HashSet<>();
   private final Set<String> customParserTypes = new HashSet<>();
   private final ClassFinder classFinder;
@@ -80,6 +81,7 @@ public class TypeAnalyzer {
     processedTypes = new HashSet<>();
     skippedTypes = new HashSet<>();
     discoveredTypes = new TreeSet<>(Comparator.comparing(ClassName::toString));
+    polymorphicallyReachedTypes = new HashSet<>();
   }
 
   /**
@@ -102,6 +104,7 @@ public class TypeAnalyzer {
       skippedTypes.clear();
       discoveredTypes.clear();
       printedTypes.clear();
+      polymorphicallyReachedTypes.clear();
 
       analyzeTypeAndSubtypes(rootClass);
 
@@ -116,56 +119,83 @@ public class TypeAnalyzer {
     }
   }
 
+  /**
+   * Returns the polymorphic base types that were reached directly (as a field
+   * type or type argument) during the most recent analysis. Such types need a
+   * polymorphic dispatch parser; polymorphic bases reached only via a concrete
+   * subtype's superclass walk are absent from this set and should be emitted as
+   * standard parsers (so the concrete subtype can still parse its inherited
+   * fields without forcing sibling subtypes to be generated).
+   */
+  public Set<Class<?>> getPolymorphicallyReachedTypes() {
+    return polymorphicallyReachedTypes;
+  }
+
   private void analyzeTypeAndSubtypes(final Class<?> type) {
+    analyzeTypeAndSubtypes(type, true);
+  }
+
+  private void analyzeTypeAndSubtypes(final Class<?> type, final boolean reachedDirectly) {
     if (!shouldAnalyzeType(type)) {
       return;
     }
 
-    if (!processedTypes.add(type)) {
-      return; // Already processed
+    final boolean polymorphic = isPolymorphicBase(type);
+    final boolean firstVisit = processedTypes.add(type);
+    final boolean newPolymorphicReach = polymorphic && reachedDirectly && polymorphicallyReachedTypes.add(type);
+
+    if (!firstVisit && !newPolymorphicReach) {
+      return; // Already processed and no new direct reach to expand on
     }
 
-    // Print the class hierarchy if we haven't seen this type before
-    if (!printedTypes.contains(type.getName())) {
-      printClassHierarchy(type);
-      printedTypes.add(type.getName());
+    if (firstVisit) {
+      // Print the class hierarchy if we haven't seen this type before
+      if (!printedTypes.contains(type.getName())) {
+        printClassHierarchy(type);
+        printedTypes.add(type.getName());
+      }
+
+      // If this type has a custom parser, skip adding it for generation
+      // but continue analyzing its fields and subtypes
+      if (!hasCustomParser(type)) {
+        addTypeForGeneration(type);
+      } else {
+        logger.info("Skipping parser generation for " + type.getName() + " (has custom parser)");
+      }
+
+      // Walk superclasses, but mark them as not-directly-reached so a polymorphic
+      // base discovered only via a concrete subtype's superclass chain does not
+      // expand into its sibling subtypes.
+      final Class<?> superclass = type.getSuperclass();
+      if (superclass != null && superclass != Object.class) {
+        analyzeTypeAndSubtypes(superclass, false);
+      }
+
+      // Always analyze fields, even for types with custom parsers
+      // This ensures we discover all types that might need parsers
+      for (final Field field : ConstructorAnalyzer.getParseableFields(type)) {
+        try {
+          analyzeField(field);
+        } catch (final TypeNotPresentException e) {
+          skippedTypes.add(e.typeName());
+        }
+      }
     }
 
-    // If this type has a custom parser, skip adding it for generation
-    // but continue analyzing its fields and subtypes
-    if (!hasCustomParser(type)) {
-      addTypeForGeneration(type);
-    } else {
-      logger.info("Skipping parser generation for " + type.getName() + " (has custom parser)");
-    }
-
-    // Find and process superclasses
-    final Class<?> superclass = type.getSuperclass();
-    if (superclass != null && superclass != Object.class) {
-      analyzeTypeAndSubtypes(superclass);
-    }
-
-    final JsonSubTypes subTypesAnnotation = type.getAnnotation(JsonSubTypes.class);
-    final JsonTypeInfo typeInfoAnnotation = type.getAnnotation(JsonTypeInfo.class); // Check presence of base annotation too
-
-    if (subTypesAnnotation != null && typeInfoAnnotation != null) { // Only process if both are present
+    // Only expand @JsonSubTypes when the polymorphic base was reached directly.
+    if (newPolymorphicReach) {
+      final JsonSubTypes subTypesAnnotation = type.getAnnotation(JsonSubTypes.class);
       logger.info("Found @JsonSubTypes on: " + type.getName() + ", analyzing listed subtypes...");
       for (final JsonSubTypes.Type subType : subTypesAnnotation.value()) {
         final Class<?> subTypeValue = subType.value();
         logger.info("  - Analyzing subtype: " + subTypeValue.getName());
-        analyzeTypeAndSubtypes(subTypeValue); // Recursive call for the subtype
+        analyzeTypeAndSubtypes(subTypeValue, true);
       }
     }
+  }
 
-    // Always analyze fields, even for types with custom parsers
-    // This ensures we discover all types that might need parsers
-    for (final Field field : ConstructorAnalyzer.getParseableFields(type)) {
-      try {
-        analyzeField(field);
-      } catch (final TypeNotPresentException e) {
-        skippedTypes.add(e.typeName());
-      }
-    }
+  private boolean isPolymorphicBase(final Class<?> type) {
+    return type.isAnnotationPresent(JsonSubTypes.class) && type.isAnnotationPresent(JsonTypeInfo.class);
   }
 
   private void analyzeField(final Field field) {

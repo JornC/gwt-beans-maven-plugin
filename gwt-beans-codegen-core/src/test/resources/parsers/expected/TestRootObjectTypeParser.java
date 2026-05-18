@@ -6,6 +6,7 @@ import nl.aerius.codegen.test.custom.TestCustomParserTypeParser;
 import nl.aerius.codegen.test.types.ConcreteType;
 import nl.aerius.codegen.test.types.TestAdvancedMapType;
 import nl.aerius.codegen.test.types.TestComplexCollectionType;
+import nl.aerius.codegen.test.types.TestConcreteSubtypeOnlyType;
 import nl.aerius.codegen.test.types.TestConstructorBasedType;
 import nl.aerius.codegen.test.types.TestConstructorWithGenericsType;
 import nl.aerius.codegen.test.types.TestConstructorWithIgnoredFieldType;
@@ -122,6 +123,12 @@ public class TestRootObjectTypeParser {
     if (baseObj.has("testPolyBase") && !baseObj.isNull("testPolyBase")) {
       final TestPolyBase value = TestPolyBaseParser.parse(baseObj.getObject("testPolyBase"));
       config.setTestPolyBase(value);
+    }
+
+    // Parse concreteSubtypeOnly
+    if (baseObj.has("concreteSubtypeOnly") && !baseObj.isNull("concreteSubtypeOnly")) {
+      final TestConcreteSubtypeOnlyType value = TestConcreteSubtypeOnlyTypeParser.parse(baseObj.getObject("concreteSubtypeOnly"));
+      config.setConcreteSubtypeOnly(value);
     }
 
     // Parse primitiveArrays

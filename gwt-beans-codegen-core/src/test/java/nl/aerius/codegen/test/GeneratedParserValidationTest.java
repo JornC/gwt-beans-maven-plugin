@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -65,5 +66,14 @@ class GeneratedParserValidationTest extends ParserGeneratorTestBase {
     });
   }
 
-  // Removed compareAllParsers method as logic moved to @TestFactory
+  @Test
+  void shouldSkipSiblingSubtypeWhenOnlyConcreteSubtypeIsReached() {
+    final Path siblingParser = outputDir.resolve("nl/aerius/codegen/test/generated/TestSinglePolySubYParser.java");
+    Assertions.assertFalse(Files.exists(siblingParser),
+        "TestSinglePolySubYParser should NOT be generated: nothing in the reachable type graph "
+            + "references TestSinglePolyBase abstractly, only TestSinglePolySubX is referenced. "
+            + "Generating a parser for TestSinglePolySubY would force callers to ship hand-written "
+            + "custom parsers for hierarchies that contain unsupported codegen patterns. "
+            + "Found unexpected file at: " + siblingParser);
+  }
 }

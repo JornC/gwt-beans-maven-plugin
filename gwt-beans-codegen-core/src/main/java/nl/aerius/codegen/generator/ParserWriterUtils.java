@@ -126,6 +126,20 @@ public final class ParserWriterUtils {
    */
   public static void generateParserForFields(final TypeSpec.Builder typeSpec, final Class<?> targetClass, final String parserPackage,
       final ClassFinder classFinder) {
+    generateParserForFields(typeSpec, targetClass, parserPackage, classFinder,
+        hasJsonTypeInfoWithNameDiscriminator(targetClass));
+  }
+
+  /**
+   * Main entry point for generating a parser class with explicit polymorphic
+   * dispatch control. When {@code usePolymorphicDispatch} is false on a class
+   * that has @JsonTypeInfo/@JsonSubTypes, a standard parse method is emitted
+   * instead of the discriminator switch - used when the analyzer determined
+   * the type is reachable only via a concrete subtype, so sibling subtype
+   * parsers are not generated and a polymorphic switch would not compile.
+   */
+  public static void generateParserForFields(final TypeSpec.Builder typeSpec, final Class<?> targetClass, final String parserPackage,
+      final ClassFinder classFinder, final boolean usePolymorphicDispatch) {
     typeSpec.addMethod(createStringParseMethod(targetClass));
 
     // Check if this class should use constructor-based parsing
@@ -136,7 +150,7 @@ public final class ParserWriterUtils {
       typeSpec.addMethod(createConstructorBasedParseMethod(targetClass, parserPackage, constructorInfo.get()));
     } else {
       // Setter-based: existing approach
-      addSetterBasedParseMethods(typeSpec, targetClass, parserPackage);
+      addSetterBasedParseMethods(typeSpec, targetClass, parserPackage, usePolymorphicDispatch);
     }
   }
 
@@ -144,8 +158,8 @@ public final class ParserWriterUtils {
    * Adds setter-based parse methods to the type specification.
    */
   private static void addSetterBasedParseMethods(final TypeSpec.Builder typeSpec, final Class<?> targetClass,
-      final String parserPackage) {
-    if (hasJsonTypeInfoWithNameDiscriminator(targetClass)) {
+      final String parserPackage, final boolean usePolymorphicDispatch) {
+    if (usePolymorphicDispatch) {
       typeSpec.addMethod(createPolymorphicObjectParseMethod(targetClass, parserPackage));
     } else {
       typeSpec.addMethod(createStandardObjectParseMethod(targetClass, parserPackage));

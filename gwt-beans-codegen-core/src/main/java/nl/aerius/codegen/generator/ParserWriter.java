@@ -1,6 +1,7 @@
 package nl.aerius.codegen.generator;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Set;
 
 import com.palantir.javapoet.ClassName;
@@ -20,15 +21,23 @@ public class ParserWriter {
   private final String generatorDetails;
   private final ClassFinder classFinder;
   private final Logger logger;
+  private final Set<Class<?>> polymorphicallyReachedTypes;
 
   public ParserWriter(final String outputDir, final String parserPackage, final String generatorName,
       final String generatorDetails, final ClassFinder classFinder, final Logger logger) {
+    this(outputDir, parserPackage, generatorName, generatorDetails, classFinder, logger, Collections.emptySet());
+  }
+
+  public ParserWriter(final String outputDir, final String parserPackage, final String generatorName,
+      final String generatorDetails, final ClassFinder classFinder, final Logger logger,
+      final Set<Class<?>> polymorphicallyReachedTypes) {
     this.outputDir = outputDir;
     this.parserPackage = parserPackage;
     this.generatorName = generatorName;
     this.generatorDetails = generatorDetails;
     this.classFinder = classFinder;
     this.logger = logger;
+    this.polymorphicallyReachedTypes = polymorphicallyReachedTypes;
   }
 
   /**
@@ -43,8 +52,10 @@ public class ParserWriter {
     // Create the parser type specification, passing both name and details
     final TypeSpec.Builder typeSpec = ParserWriterUtils.createParserTypeSpec(parserClassName, generatorName, generatorDetails);
 
+    final boolean usePolymorphicDispatch = polymorphicallyReachedTypes.contains(targetClass);
+
     // Add parser methods
-    ParserWriterUtils.generateParserForFields(typeSpec, targetClass, parserPackage, classFinder);
+    ParserWriterUtils.generateParserForFields(typeSpec, targetClass, parserPackage, classFinder, usePolymorphicDispatch);
 
     // Write to file
     ParserWriterUtils.writeParserToFile(outputDir, parserPackage, typeSpec.build(), parserClassName, logger);
