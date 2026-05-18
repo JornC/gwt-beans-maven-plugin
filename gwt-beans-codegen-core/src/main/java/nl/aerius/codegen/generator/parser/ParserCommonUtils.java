@@ -117,16 +117,9 @@ public final class ParserCommonUtils {
     return (genericStart < 0 ? typeName : typeName.substring(0, genericStart)).trim();
   }
 
-  /**
-   * Returns the JSON key the wire uses for a field. Honors {@code @JsonProperty("foo")} when
-   * present and non-empty, falling back to the Java field name otherwise. Use this everywhere
-   * the generator/validator needs to refer to the field by its wire name (JSON keys, setter
-   * derivation), so a field like {@code @JsonProperty("id") private int assessmentAreaId} reads
-   * from {@code "id"} and binds to {@code setId(...)} rather than {@code setAssessmentAreaId(...)}.
-   */
   public static String jsonKeyFor(final Field field) {
     final JsonProperty ann = field.getAnnotation(JsonProperty.class);
-    if (ann != null && ann.value() != null && !ann.value().isEmpty()) {
+    if (ann != null && !ann.value().isEmpty()) {
       return ann.value();
     }
     return field.getName();

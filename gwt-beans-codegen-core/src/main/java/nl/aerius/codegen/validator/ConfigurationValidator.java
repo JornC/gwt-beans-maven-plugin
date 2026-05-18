@@ -426,8 +426,6 @@ public class ConfigurationValidator {
       return true;
     }
     final String fieldName = field.getName();
-    // Accessors follow the JSON key (so @JsonProperty("id") on assessmentAreaId looks up getId, not
-    // getAssessmentAreaId). Without an annotation, this reduces to the field name as before.
     final String capitalizedName = ParserCommonUtils.capitalize(ParserCommonUtils.jsonKeyFor(field));
     boolean isValid = true;
     final String prefix = treatErrorsAsWarnings ? WARNING : RED_CROSS;
@@ -483,8 +481,6 @@ public class ConfigurationValidator {
       return isValid;
     }
 
-    // The setter name follows the JSON key (capitalizedName), so @JsonProperty("id") on
-    // assessmentAreaId looks up setId, not setAssessmentAreaId. Mirrors what the generator emits.
     final String setterName = "set" + capitalizedName;
     try {
       final Method setter = clazz.getMethod(setterName, field.getType());
