@@ -3,11 +3,8 @@ package nl.aerius.codegen.test.types;
 import nl.aerius.codegen.test.types.polymorphic.TestSinglePolySubX;
 
 /**
- * Wires only a concrete subtype of a polymorphic hierarchy. The hierarchy's
- * abstract base (TestSinglePolyBase) is reachable via the subtype's superclass
- * chain, but no field is declared as the base itself - so the generator should
- * skip sibling subtype parsers (TestSinglePolySubY) and emit a plain parser
- * for the abstract base rather than a polymorphic discriminator switch.
+ * References only one concrete subtype of a polymorphic hierarchy. The
+ * sibling subtype (TestSinglePolySubY) must not get a generated parser.
  */
 public class TestConcreteSubtypeOnlyType {
   private TestSinglePolySubX onlySubtype;

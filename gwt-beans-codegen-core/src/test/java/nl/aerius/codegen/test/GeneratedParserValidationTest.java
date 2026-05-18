@@ -70,10 +70,6 @@ class GeneratedParserValidationTest extends ParserGeneratorTestBase {
   void shouldSkipSiblingSubtypeWhenOnlyConcreteSubtypeIsReached() {
     final Path siblingParser = outputDir.resolve("nl/aerius/codegen/test/generated/TestSinglePolySubYParser.java");
     Assertions.assertFalse(Files.exists(siblingParser),
-        "TestSinglePolySubYParser should NOT be generated: nothing in the reachable type graph "
-            + "references TestSinglePolyBase abstractly, only TestSinglePolySubX is referenced. "
-            + "Generating a parser for TestSinglePolySubY would force callers to ship hand-written "
-            + "custom parsers for hierarchies that contain unsupported codegen patterns. "
-            + "Found unexpected file at: " + siblingParser);
+        "Sibling subtype parser must not be generated when only the other concrete subtype is referenced: " + siblingParser);
   }
 }

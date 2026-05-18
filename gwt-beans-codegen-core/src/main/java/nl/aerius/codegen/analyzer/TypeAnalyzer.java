@@ -106,7 +106,7 @@ public class TypeAnalyzer {
       printedTypes.clear();
       polymorphicallyReachedTypes.clear();
 
-      analyzeTypeAndSubtypes(rootClass);
+      analyzeTypeAndSubtypes(rootClass, true);
 
       if (!skippedTypes.isEmpty()) {
         logger.info("Warning: The following types were not found and skipped:");
@@ -120,19 +120,13 @@ public class TypeAnalyzer {
   }
 
   /**
-   * Returns the polymorphic base types that were reached directly (as a field
-   * type or type argument) during the most recent analysis. Such types need a
-   * polymorphic dispatch parser; polymorphic bases reached only via a concrete
-   * subtype's superclass walk are absent from this set and should be emitted as
-   * standard parsers (so the concrete subtype can still parse its inherited
-   * fields without forcing sibling subtypes to be generated).
+   * Polymorphic bases reached directly (as a field type or type argument) in
+   * the most recent analysis. The generator emits a discriminator switch for
+   * these; bases reached only via a concrete subtype's superclass chain are
+   * absent and get a standard parse method instead.
    */
   public Set<Class<?>> getPolymorphicallyReachedTypes() {
     return polymorphicallyReachedTypes;
-  }
-
-  private void analyzeTypeAndSubtypes(final Class<?> type) {
-    analyzeTypeAndSubtypes(type, true);
   }
 
   private void analyzeTypeAndSubtypes(final Class<?> type, final boolean reachedDirectly) {
@@ -145,34 +139,28 @@ public class TypeAnalyzer {
     final boolean newPolymorphicReach = polymorphic && reachedDirectly && polymorphicallyReachedTypes.add(type);
 
     if (!firstVisit && !newPolymorphicReach) {
-      return; // Already processed and no new direct reach to expand on
+      return;
     }
 
     if (firstVisit) {
-      // Print the class hierarchy if we haven't seen this type before
       if (!printedTypes.contains(type.getName())) {
         printClassHierarchy(type);
         printedTypes.add(type.getName());
       }
 
-      // If this type has a custom parser, skip adding it for generation
-      // but continue analyzing its fields and subtypes
       if (!hasCustomParser(type)) {
         addTypeForGeneration(type);
       } else {
         logger.info("Skipping parser generation for " + type.getName() + " (has custom parser)");
       }
 
-      // Walk superclasses, but mark them as not-directly-reached so a polymorphic
-      // base discovered only via a concrete subtype's superclass chain does not
-      // expand into its sibling subtypes.
+      // Superclasses are not "directly reached" - if the superclass is a
+      // polymorphic base, sibling subtypes stay unwalked.
       final Class<?> superclass = type.getSuperclass();
       if (superclass != null && superclass != Object.class) {
         analyzeTypeAndSubtypes(superclass, false);
       }
 
-      // Always analyze fields, even for types with custom parsers
-      // This ensures we discover all types that might need parsers
       for (final Field field : ConstructorAnalyzer.getParseableFields(type)) {
         try {
           analyzeField(field);
@@ -244,12 +232,12 @@ public class TypeAnalyzer {
       if (isUnsupportedType(classType)) {
         throw new UnsupportedTypeException(classType.getName(), "type parameter/element", Object.class);
       }
-      analyzeTypeAndSubtypes(classType);
+      analyzeTypeAndSubtypes(classType, true);
     } else if (type instanceof ParameterizedType) {
       final ParameterizedType paramType = (ParameterizedType) type;
       // Analyze the raw type
       if (paramType.getRawType() instanceof Class<?>) {
-        analyzeTypeAndSubtypes((Class<?>) paramType.getRawType());
+        analyzeTypeAndSubtypes((Class<?>) paramType.getRawType(), true);
       }
       // Analyze all type arguments recursively
       for (final Type typeArg : paramType.getActualTypeArguments()) {
