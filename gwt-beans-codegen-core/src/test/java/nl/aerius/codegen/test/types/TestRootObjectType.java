@@ -26,6 +26,7 @@ public class TestRootObjectType {
   private TestConstructorWithGenericsType constructorWithGenerics;
   private TestConstructorWithIgnoredFieldType constructorWithIgnoredField;
   private TestRecordType recordType;
+  private TestJsonPropertyRenameType jsonPropertyRename;
 
   public String getFoo() {
     return foo;
@@ -171,6 +172,14 @@ public class TestRootObjectType {
     this.recordType = recordType;
   }
 
+  public TestJsonPropertyRenameType getJsonPropertyRename() {
+    return jsonPropertyRename;
+  }
+
+  public void setJsonPropertyRename(TestJsonPropertyRenameType jsonPropertyRename) {
+    this.jsonPropertyRename = jsonPropertyRename;
+  }
+
   public static TestRootObjectType createFullObject() {
     TestRootObjectType obj = new TestRootObjectType();
     obj.setFoo("test string");
@@ -191,6 +200,7 @@ public class TestRootObjectType {
     obj.setConstructorWithGenerics(TestConstructorWithGenericsType.createFullObject());
     obj.setConstructorWithIgnoredField(TestConstructorWithIgnoredFieldType.createFullObject());
     obj.setRecordType(TestRecordType.createFullObject());
+    obj.setJsonPropertyRename(TestJsonPropertyRenameType.createFullObject());
     return obj;
   }
 

@@ -403,20 +403,21 @@ public final class ParserWriterUtils {
    */
   private static String generateFieldParsingCode(final MethodSpec.Builder methodBuilder, final Field field,
       final String parserPackage) {
+    final String jsonKey = ParserCommonUtils.jsonKeyFor(field);
     methodBuilder.addCode("\n");
     methodBuilder.addComment("Parse $L", field.getName());
 
     // Check if field is required (must exist in JSON)
-    methodBuilder.beginControlFlow("if (!$L.has($S))", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, field.getName())
+    methodBuilder.beginControlFlow("if (!$L.has($S))", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, jsonKey)
         .addStatement("throw new $T($S)", RuntimeException.class,
-            "Required field '" + field.getName() + "' is missing")
+            "Required field '" + jsonKey + "' is missing")
         .endControlFlow();
 
     // Create access expression for this field
     final CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
         field.getGenericType(),
         ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
-        CodeBlock.of("$S", field.getName()));
+        CodeBlock.of("$S", jsonKey));
 
     // Use existing TypeParser infrastructure to generate parsing code with field name as variable name
     final CodeBlock.Builder parseCode = CodeBlock.builder();
@@ -454,18 +455,19 @@ public final class ParserWriterUtils {
     }
 
     for (final Field field : ConstructorAnalyzer.getParseableFields(targetClass)) {
+      final String jsonKey = ParserCommonUtils.jsonKeyFor(field);
       methodBuilder.addCode("\n");
       methodBuilder.addComment("Parse $L", field.getName());
       final boolean requireNonNull = !ParserCommonUtils.isPrimitiveType(field.getGenericType());
       methodBuilder.addCode(ParserCommonUtils.createFieldExistsCheck(
           ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
-          field.getName(),
+          jsonKey,
           requireNonNull,
           innerCode -> {
             final CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
                 field.getGenericType(),
                 ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
-                CodeBlock.of("$S", field.getName()));
+                CodeBlock.of("$S", jsonKey));
 
             final String resultVar = dispatchGenerateParsingCodeInto(
                 innerCode,
@@ -475,7 +477,7 @@ public final class ParserWriterUtils {
                 fieldAccess,
                 1,
                 field.getGenericType());
-            innerCode.addStatement("config.set$L($L)", ParserCommonUtils.capitalize(field.getName()), resultVar);
+            innerCode.addStatement("config.set$L($L)", ParserCommonUtils.capitalize(jsonKey), resultVar);
           }));
     }
 

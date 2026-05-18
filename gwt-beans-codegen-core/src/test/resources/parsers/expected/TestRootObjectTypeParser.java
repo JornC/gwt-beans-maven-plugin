@@ -12,6 +12,7 @@ import nl.aerius.codegen.test.types.TestConstructorWithIgnoredFieldType;
 import nl.aerius.codegen.test.types.TestCustomParserType;
 import nl.aerius.codegen.test.types.TestEnumListType;
 import nl.aerius.codegen.test.types.TestEnumType;
+import nl.aerius.codegen.test.types.TestJsonPropertyRenameType;
 import nl.aerius.codegen.test.types.TestNestedMapType;
 import nl.aerius.codegen.test.types.TestPrimitiveArrayType;
 import nl.aerius.codegen.test.types.TestRecordType;
@@ -152,6 +153,12 @@ public class TestRootObjectTypeParser {
     if (baseObj.has("recordType") && !baseObj.isNull("recordType")) {
       final TestRecordType value = TestRecordTypeParser.parse(baseObj.getObject("recordType"));
       config.setRecordType(value);
+    }
+
+    // Parse jsonPropertyRename
+    if (baseObj.has("jsonPropertyRename") && !baseObj.isNull("jsonPropertyRename")) {
+      final TestJsonPropertyRenameType value = TestJsonPropertyRenameTypeParser.parse(baseObj.getObject("jsonPropertyRename"));
+      config.setJsonPropertyRename(value);
     }
   }
 }

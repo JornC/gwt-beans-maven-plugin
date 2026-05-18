@@ -1,5 +1,6 @@
 package nl.aerius.codegen.generator.parser;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
@@ -11,6 +12,7 @@ import java.util.function.Consumer;
 
 import javax.annotation.processing.Generated;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.palantir.javapoet.AnnotationSpec;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
@@ -113,6 +115,21 @@ public final class ParserCommonUtils {
   public static String stripGenerics(final String typeName) {
     final int genericStart = typeName.indexOf('<');
     return (genericStart < 0 ? typeName : typeName.substring(0, genericStart)).trim();
+  }
+
+  /**
+   * Returns the JSON key the wire uses for a field. Honors {@code @JsonProperty("foo")} when
+   * present and non-empty, falling back to the Java field name otherwise. Use this everywhere
+   * the generator/validator needs to refer to the field by its wire name (JSON keys, setter
+   * derivation), so a field like {@code @JsonProperty("id") private int assessmentAreaId} reads
+   * from {@code "id"} and binds to {@code setId(...)} rather than {@code setAssessmentAreaId(...)}.
+   */
+  public static String jsonKeyFor(final Field field) {
+    final JsonProperty ann = field.getAnnotation(JsonProperty.class);
+    if (ann != null && ann.value() != null && !ann.value().isEmpty()) {
+      return ann.value();
+    }
+    return field.getName();
   }
 
   /**

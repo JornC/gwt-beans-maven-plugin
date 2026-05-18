@@ -29,6 +29,7 @@ import jsinterop.annotations.JsProperty;
 
 import nl.aerius.codegen.analyzer.ConstructorAnalyzer;
 import nl.aerius.codegen.analyzer.TypeAnalyzer;
+import nl.aerius.codegen.generator.parser.ParserCommonUtils;
 import nl.aerius.codegen.util.ClassFinder;
 import nl.aerius.codegen.util.FileUtils;
 import nl.aerius.codegen.util.Logger;
@@ -425,7 +426,9 @@ public class ConfigurationValidator {
       return true;
     }
     final String fieldName = field.getName();
-    final String capitalizedName = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+    // Accessors follow the JSON key (so @JsonProperty("id") on assessmentAreaId looks up getId, not
+    // getAssessmentAreaId). Without an annotation, this reduces to the field name as before.
+    final String capitalizedName = ParserCommonUtils.capitalize(ParserCommonUtils.jsonKeyFor(field));
     boolean isValid = true;
     final String prefix = treatErrorsAsWarnings ? WARNING : RED_CROSS;
 
@@ -480,18 +483,22 @@ public class ConfigurationValidator {
       return isValid;
     }
 
-    // Check setter for non-constructor-based types
+    // The setter name follows the JSON key (capitalizedName), so @JsonProperty("id") on
+    // assessmentAreaId looks up setId, not setAssessmentAreaId. Mirrors what the generator emits.
+    final String setterName = "set" + capitalizedName;
     try {
-      final Method setter = clazz.getMethod("set" + capitalizedName, field.getType());
+      final Method setter = clazz.getMethod(setterName, field.getType());
       if (!Modifier.isPublic(setter.getModifiers())) {
-        logger.warn(prefix + " " + clazz.getName() + ": Field '" + fieldName + "' must have a public setter (setter not public)");
+        logger.warn(prefix + " " + clazz.getName() + ": Field '" + fieldName + "' must have a public setter '" + setterName
+            + "' (setter not public)");
         if (!treatErrorsAsWarnings) {
           hasErrors = true;
         }
         isValid = false;
       }
     } catch (final NoSuchMethodException e) {
-      logger.warn(prefix + " " + clazz.getName() + ": Field '" + fieldName + "' must have a public setter (setter not found)");
+      logger.warn(prefix + " " + clazz.getName() + ": Field '" + fieldName + "' must have a public setter '" + setterName
+          + "' (setter not found)");
       if (!treatErrorsAsWarnings) {
         hasErrors = true;
       }
