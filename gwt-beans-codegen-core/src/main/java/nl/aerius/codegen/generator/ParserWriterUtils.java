@@ -21,6 +21,7 @@ import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
 import com.palantir.javapoet.JavaFile;
 import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.TypeName;
 import com.palantir.javapoet.TypeSpec;
 
 import nl.aerius.codegen.analyzer.ConstructorAnalyzer;
@@ -402,38 +403,69 @@ public final class ParserWriterUtils {
 
   /**
    * Generates parsing code for a single field in a constructor-based parser.
+   *
+   * <p>Primitive fields are required: Jackson always serializes them, so a missing primitive in the
+   * JSON indicates a malformed payload and we throw. Non-primitive fields tolerate missing or null
+   * entries because Jackson omits null fields by default - the resulting constructor arg defaults
+   * to {@code null} and is only populated when the JSON has a non-null value. This mirrors the
+   * setter-based path, which already silently skips missing fields via
+   * {@link ParserCommonUtils#createFieldExistsCheck}.
    */
   private static String generateFieldParsingCode(final MethodSpec.Builder methodBuilder, final Field field,
       final String parserPackage) {
     methodBuilder.addCode("\n");
     methodBuilder.addComment("Parse $L", field.getName());
 
-    // Check if field is required (must exist in JSON)
-    methodBuilder.beginControlFlow("if (!$L.has($S))", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, field.getName())
-        .addStatement("throw new $T($S)", RuntimeException.class,
-            "Required field '" + field.getName() + "' is missing")
-        .endControlFlow();
-
-    // Create access expression for this field
+    final Type fieldType = field.getGenericType();
     final CodeBlock fieldAccess = ParserCommonUtils.createFieldAccessCode(
-        field.getGenericType(),
+        fieldType,
         ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
         CodeBlock.of("$S", field.getName()));
 
-    // Use existing TypeParser infrastructure to generate parsing code with field name as variable name
+    if (ParserCommonUtils.isPrimitiveType(fieldType)) {
+      methodBuilder.beginControlFlow("if (!$L.has($S))", ParserCommonUtils.BASE_OBJECT_PARAM_NAME, field.getName())
+          .addStatement("throw new $T($S)", RuntimeException.class,
+              "Required field '" + field.getName() + "' is missing")
+          .endControlFlow();
+
+      final CodeBlock.Builder parseCode = CodeBlock.builder();
+      final String resultVar = dispatchGenerateParsingCodeInto(
+          parseCode,
+          fieldType,
+          ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
+          parserPackage,
+          fieldAccess,
+          1,
+          fieldType,
+          field.getName());
+      methodBuilder.addCode(parseCode.build());
+      return resultVar;
+    }
+
+    // Non-primitive: pre-declare a nullable outer variable, populate it only when the JSON entry is
+    // present and non-null. The dispatched parser writes into a suffixed inner variable to avoid
+    // colliding with the outer declaration.
+    methodBuilder.addStatement("$T $L = null", TypeName.get(fieldType), field.getName());
+
     final CodeBlock.Builder parseCode = CodeBlock.builder();
-    final String resultVar = dispatchGenerateParsingCodeInto(
+    parseCode.beginControlFlow("if ($L.has($S) && !$L.isNull($S))",
+        ParserCommonUtils.BASE_OBJECT_PARAM_NAME, field.getName(),
+        ParserCommonUtils.BASE_OBJECT_PARAM_NAME, field.getName());
+    final String innerVarName = field.getName() + "Value";
+    final String dispatchedVar = dispatchGenerateParsingCodeInto(
         parseCode,
-        field.getGenericType(),
+        fieldType,
         ParserCommonUtils.BASE_OBJECT_PARAM_NAME,
         parserPackage,
         fieldAccess,
         1,
-        field.getGenericType(),
-        field.getName());
-
+        fieldType,
+        innerVarName);
+    parseCode.addStatement("$L = $L", field.getName(), dispatchedVar);
+    parseCode.endControlFlow();
     methodBuilder.addCode(parseCode.build());
-    return resultVar;
+
+    return field.getName();
   }
 
   private static MethodSpec createConfigParseMethod(final Class<?> targetClass, final String parserPackage) {

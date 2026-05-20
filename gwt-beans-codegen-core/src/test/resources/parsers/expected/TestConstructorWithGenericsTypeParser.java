@@ -29,54 +29,59 @@ public class TestConstructorWithGenericsTypeParser {
     }
 
     // Parse tags
-    if (!baseObj.has("tags")) {
-      throw new RuntimeException("Required field 'tags' is missing");
+    List<String> tags = null;
+    if (baseObj.has("tags") && !baseObj.isNull("tags")) {
+      final JSONArrayHandle tagsValueArray = baseObj.getArray("tags");
+      final List<String> tagsValue = new ArrayList<>();
+      tagsValueArray.forEachString(tagsValue::add);
+      tags = tagsValue;
     }
-    final JSONArrayHandle tagsArray = baseObj.getArray("tags");
-    final List<String> tags = new ArrayList<>();
-    tagsArray.forEachString(tags::add);
 
     // Parse counts
-    if (!baseObj.has("counts")) {
-      throw new RuntimeException("Required field 'counts' is missing");
+    Map<String, Integer> counts = null;
+    if (baseObj.has("counts") && !baseObj.isNull("counts")) {
+      final JSONObjectHandle obj = baseObj.getObject("counts");
+      final Map<String, Integer> countsValue = new LinkedHashMap<>();
+      obj.keySet().forEach(key -> {
+        final Integer level2Value = obj.getInteger(key);
+        countsValue.put(key, level2Value);
+      });
+      counts = countsValue;
     }
-    final JSONObjectHandle obj = baseObj.getObject("counts");
-    final Map<String, Integer> counts = new LinkedHashMap<>();
-    obj.keySet().forEach(key -> {
-      final Integer level2Value = obj.getInteger(key);
-      counts.put(key, level2Value);
-    });
 
     // Parse labels
-    if (!baseObj.has("labels")) {
-      throw new RuntimeException("Required field 'labels' is missing");
+    Set<String> labels = null;
+    if (baseObj.has("labels") && !baseObj.isNull("labels")) {
+      final JSONArrayHandle labelsValueArray = baseObj.getArray("labels");
+      final Set<String> labelsValue = new HashSet<>();
+      labelsValueArray.forEachString(labelsValue::add);
+      labels = labelsValue;
     }
-    final JSONArrayHandle labelsArray = baseObj.getArray("labels");
-    final Set<String> labels = new HashSet<>();
-    labelsArray.forEachString(labels::add);
 
     // Parse sizes
-    if (!baseObj.has("sizes")) {
-      throw new RuntimeException("Required field 'sizes' is missing");
-    }
     int[] sizes = null;
-    final JSONArrayHandle sizesJsonArray = baseObj.getArray("sizes");
-    if (sizesJsonArray != null) {
-      final List<Integer> sizesTempList = new ArrayList<>();
-      sizesJsonArray.forEachInteger(sizesTempList::add);
-      sizes = sizesTempList.stream().mapToInt(i -> i != null ? i.intValue() : 0).toArray();
+    if (baseObj.has("sizes") && !baseObj.isNull("sizes")) {
+      int[] sizesValue = null;
+      final JSONArrayHandle sizesValueJsonArray = baseObj.getArray("sizes");
+      if (sizesValueJsonArray != null) {
+        final List<Integer> sizesValueTempList = new ArrayList<>();
+        sizesValueJsonArray.forEachInteger(sizesValueTempList::add);
+        sizesValue = sizesValueTempList.stream().mapToInt(i -> i != null ? i.intValue() : 0).toArray();
+      }
+      sizes = sizesValue;
     }
 
     // Parse aliases
-    if (!baseObj.has("aliases")) {
-      throw new RuntimeException("Required field 'aliases' is missing");
-    }
     String[] aliases = null;
-    final JSONArrayHandle aliasesJsonArray = baseObj.getArray("aliases");
-    if (aliasesJsonArray != null) {
-      final List<String> aliasesTempList = new ArrayList<>();
-      aliasesJsonArray.forEachString(aliasesTempList::add);
-      aliases = aliasesTempList.toArray(new String[0]);
+    if (baseObj.has("aliases") && !baseObj.isNull("aliases")) {
+      String[] aliasesValue = null;
+      final JSONArrayHandle aliasesValueJsonArray = baseObj.getArray("aliases");
+      if (aliasesValueJsonArray != null) {
+        final List<String> aliasesValueTempList = new ArrayList<>();
+        aliasesValueJsonArray.forEachString(aliasesValueTempList::add);
+        aliasesValue = aliasesValueTempList.toArray(new String[0]);
+      }
+      aliases = aliasesValue;
     }
 
     return new TestConstructorWithGenericsType(tags, counts, labels, sizes, aliases);

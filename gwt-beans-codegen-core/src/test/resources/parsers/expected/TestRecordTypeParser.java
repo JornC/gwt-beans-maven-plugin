@@ -25,10 +25,11 @@ public class TestRecordTypeParser {
     }
 
     // Parse name
-    if (!baseObj.has("name")) {
-      throw new RuntimeException("Required field 'name' is missing");
+    String name = null;
+    if (baseObj.has("name") && !baseObj.isNull("name")) {
+      final String nameValue = baseObj.getString("name");
+      name = nameValue;
     }
-    final String name = baseObj.getString("name");
 
     // Parse value
     if (!baseObj.has("value")) {
@@ -37,12 +38,13 @@ public class TestRecordTypeParser {
     final int value = baseObj.getInteger("value");
 
     // Parse tags
-    if (!baseObj.has("tags")) {
-      throw new RuntimeException("Required field 'tags' is missing");
+    List<String> tags = null;
+    if (baseObj.has("tags") && !baseObj.isNull("tags")) {
+      final JSONArrayHandle tagsValueArray = baseObj.getArray("tags");
+      final List<String> tagsValue = new ArrayList<>();
+      tagsValueArray.forEachString(tagsValue::add);
+      tags = tagsValue;
     }
-    final JSONArrayHandle tagsArray = baseObj.getArray("tags");
-    final List<String> tags = new ArrayList<>();
-    tagsArray.forEachString(tags::add);
 
     return new TestRecordType(name, value, tags);
   }

@@ -21,10 +21,11 @@ public class TestConstructorWithIgnoredFieldTypeParser {
     }
 
     // Parse name
-    if (!baseObj.has("name")) {
-      throw new RuntimeException("Required field 'name' is missing");
+    String name = null;
+    if (baseObj.has("name") && !baseObj.isNull("name")) {
+      final String nameValue = baseObj.getString("name");
+      name = nameValue;
     }
-    final String name = baseObj.getString("name");
 
     return new TestConstructorWithIgnoredFieldType(name);
   }
