@@ -88,7 +88,7 @@ public final class ParserWriterUtils {
   public static void initParsers(final ClassFinder classFinder, final Logger logger) {
     enumFieldParser = new EnumFieldParser(classFinder, logger);
     collectionFieldParser = new CollectionFieldParser(classFinder, logger);
-    mapFieldParser = new MapFieldParser(logger);
+    mapFieldParser = new MapFieldParser(classFinder, logger);
 
     PARSERS = new TypeParser[] {
         SIMPLE_FIELD_PARSER,

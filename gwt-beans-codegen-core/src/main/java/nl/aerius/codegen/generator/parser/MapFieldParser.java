@@ -1,5 +1,6 @@
 package nl.aerius.codegen.generator.parser;
 
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -8,6 +9,7 @@ import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
 
 import nl.aerius.codegen.generator.ParserWriterUtils;
+import nl.aerius.codegen.util.ClassFinder;
 import nl.aerius.codegen.util.Logger;
 
 /**
@@ -15,9 +17,11 @@ import nl.aerius.codegen.util.Logger;
  */
 public class MapFieldParser implements TypeParser {
 
+  private final ClassFinder classFinder;
   private final Logger logger;
 
-  public MapFieldParser(final Logger logger) {
+  public MapFieldParser(final ClassFinder classFinder, final Logger logger) {
+    this.classFinder = classFinder;
     this.logger = logger;
   }
 
@@ -118,8 +122,16 @@ public class MapFieldParser implements TypeParser {
 
     // Introduce intermediate key variable specifically for Enum keys
     if (keyType instanceof Class<?> && ((Class<?>) keyType).isEnum()) {
+      final Class<?> enumType = (Class<?>) keyType;
+      final Method jsonCreatorMethod = ParserCommonUtils.findJsonCreatorMethod(enumType, classFinder, logger);
       final String enumKeyVar = ParserCommonUtils.getVariableNameForLevel(level, "EnumKey");
-      code.addStatement("final $T $L = $T.valueOf($L)", keyType, enumKeyVar, keyType, keyVar);
+      if (jsonCreatorMethod != null) {
+        // Server emits the key via @JsonValue; deserialize via the matching @JsonCreator factory
+        // (Enum.valueOf only accepts the Java constant name, not the JSON form).
+        code.addStatement("final $T $L = $T.$L($L)", keyType, enumKeyVar, keyType, jsonCreatorMethod.getName(), keyVar);
+      } else {
+        code.addStatement("final $T $L = $T.valueOf($L)", keyType, enumKeyVar, keyType, keyVar);
+      }
       code.addStatement("$L.put($L, $L)", mapVar, enumKeyVar, valueVarName); // Use intermediate variable
     } else {
       // Original logic for other key types (String, Integer, etc.)
